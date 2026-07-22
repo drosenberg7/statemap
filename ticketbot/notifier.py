@@ -24,7 +24,9 @@ class Notifier:
         self.channels = config.notifiers
 
     def notify(self, listing: Listing) -> None:
-        title = "🎾 US Open ticket found"
+        # Keep the title plain ASCII: HTTP headers (used by ntfy) are latin-1,
+        # so an emoji here throws. ntfy renders the 🎾 from the "tennis" tag.
+        title = "US Open ticket found"
         body = listing.summary()
         for channel in self.channels:
             try:
@@ -43,8 +45,23 @@ class Notifier:
 
     # -- channels -----------------------------------------------------------
 
+    @staticmethod
+    def _encode_header(value: str) -> str:
+        """Make a header value safe for HTTP (latin-1).
+
+        Defensive: if a value ever contains non-latin-1 characters (emoji,
+        accented section names, …) we RFC 2047-encode it, which ntfy decodes
+        back to the original. ASCII values pass through untouched.
+        """
+        try:
+            value.encode("latin-1")
+            return value
+        except UnicodeEncodeError:
+            import base64
+            return "=?UTF-8?B?" + base64.b64encode(value.encode("utf-8")).decode("ascii") + "?="
+
     def _console(self, title: str, body: str, url: str) -> None:
-        print(f"\n*** {title} ***\n{body}\n{url}\n", flush=True)
+        print(f"\n*** 🎾 {title} ***\n{body}\n{url}\n", flush=True)
 
     def _ntfy(self, title: str, body: str, url: str) -> None:
         topic = self.config.ntfy_topic
@@ -56,7 +73,7 @@ class Notifier:
             f"{server}/{topic}",
             data=body.encode("utf-8"),
             headers={
-                "Title": title,
+                "Title": self._encode_header(title),
                 "Priority": "high",
                 "Tags": "tennis,tickets",
                 "Click": url,
