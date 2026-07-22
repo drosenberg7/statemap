@@ -1,0 +1,30 @@
+# US Open ticket monitor configuration.
+# Secrets (ntfy topic, any API keys) come from environment variables / .env,
+# NOT from this file — see .env.example.
+
+criteria:
+  target_date: 2026-08-30   # US Open session date to watch (YYYY-MM-DD)
+  session: day              # day | night | any
+  categories:               # any of: grounds, ashe, armstrong
+    - grounds
+    - ashe
+    - armstrong
+  max_price: 275            # alert only for listings strictly under this (USD)
+
+# Which marketplaces to poll. tickpick + seatgeek work best without API keys.
+# ticketmaster needs TICKETMASTER_API_KEY; vividseats/stubhub need extra config.
+providers:
+  - tickpick
+  - seatgeek
+  - ticketmaster
+
+poll_interval_seconds: 300  # 5 minutes. Don't go too low or you'll get blocked.
+request_timeout: 20
+state_path: state.json      # remembers what we've already alerted on
+
+notify:
+  channels:                 # order doesn't matter; each fires independently
+    - ntfy
+    - console
+  ntfy_server: https://ntfy.sh
+  # ntfy_topic is read from the NTFY_TOPIC env var (keep it secret-ish).
