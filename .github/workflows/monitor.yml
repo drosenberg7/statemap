@@ -22,6 +22,12 @@ on:
   schedule:
     - cron: "*/5 * * * *"   # every 5 minutes (GitHub minimum)
   workflow_dispatch:         # lets you run it on demand from the Actions tab
+    inputs:
+      mode:
+        description: "once = normal poll · test = send a test push to your phone"
+        default: once
+        type: choice
+        options: [once, test]
 
 # Never let two poll cycles overlap.
 concurrency:
@@ -60,4 +66,12 @@ jobs:
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
           SEATGEEK_CLIENT_ID: ${{ secrets.SEATGEEK_CLIENT_ID }}
           STATE_PATH: state.json
-        run: python run.py --once
+        # Scheduled runs have an empty mode input -> normal poll. The "test"
+        # option (manual dispatch) forces a push through every channel so you
+        # can confirm alerts actually reach your phone.
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "test" ]; then
+            python run.py --test-notify
+          else
+            python run.py --once
+          fi
