@@ -2,7 +2,12 @@
 
 from ticketbot.providers.seatgeek import parse_platform_events
 from ticketbot.providers.ticketmaster import parse_discovery
-from ticketbot.providers.tickpick import parse_listings as tp_parse, parse_search
+from ticketbot.providers.tickpick import (
+    parse_listings as tp_parse,
+    parse_search,
+    find_listings_array,
+    extract_from_html,
+)
 from ticketbot.providers.vividseats import parse_listings as vs_parse
 
 
@@ -78,6 +83,39 @@ def test_vividseats_parse():
     out = vs_parse(payload, "US Open", None, "http://vs")
     assert out[0].price == 240.0
     assert out[0].fees_included is False
+
+
+def test_find_listings_array_bare_list():
+    rows = find_listings_array([{"p": 100, "s": "A"}, {"p": 200, "s": "B"}])
+    assert len(rows) == 2
+
+
+def test_find_listings_array_nested():
+    blob = {"props": {"pageProps": {"event": {"listings": [{"price": 150}]}}}}
+    rows = find_listings_array(blob)
+    assert rows == [{"price": 150}]
+
+
+def test_find_listings_array_none():
+    assert find_listings_array({"a": {"b": [1, 2, 3]}}) == []
+
+
+def test_extract_from_html_next_data():
+    payload = {"props": {"pageProps": {"listings": [{"price": 199, "section": "Loge"}]}}}
+    html = (
+        '<html><body><script id="__NEXT_DATA__" type="application/json">'
+        + __import__("json").dumps(payload)
+        + "</script></body></html>"
+    )
+    rows = extract_from_html(html)
+    assert rows == [{"price": 199, "section": "Loge"}]
+    # And it flows through the normal parser.
+    listings = tp_parse({"listings": rows}, "US Open", None, "http://tp")
+    assert listings[0].price == 199.0
+
+
+def test_extract_from_html_nothing():
+    assert extract_from_html("<html>no data here</html>") == []
 
 
 def test_empty_payloads_are_safe():
