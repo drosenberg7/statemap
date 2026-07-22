@@ -41,6 +41,8 @@ class Listing:
     quantity: Optional[int] = None    # number of seats in the listing
     fees_included: bool = False       # whether `price` already includes fees
     raw_id: Optional[str] = None      # provider-native id, if any
+    curated: bool = False             # user pinned this exact event -> trust it,
+                                      # skip date/session filtering (price still applies)
 
     # Populated by __post_init__.
     id: str = field(default="", init=False)

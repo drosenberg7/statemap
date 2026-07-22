@@ -92,3 +92,21 @@ def test_any_session_allows_night():
 
 def test_missing_date_rejected():
     assert not match(_listing(event_datetime=None, section="Ashe"), CRIT).ok
+
+
+# ---- curated (user-pinned) events ----------------------------------------
+
+def test_curated_skips_date_and_session():
+    # No date, evening time -> would normally fail, but curated trusts it.
+    l = _listing(price=199, event_datetime=None, section=None, category=ASHE, curated=True)
+    r = match(l, CRIT)
+    assert r.ok and "curated" in r.reason
+
+def test_curated_still_enforces_price():
+    l = _listing(price=300, event_datetime=None, category=ASHE, curated=True)
+    assert not match(l, CRIT).ok
+
+def test_curated_still_enforces_category():
+    crit = Criteria(date(2026, 8, 30), "day", [ASHE], 275)  # only Ashe wanted
+    l = _listing(price=199, event_datetime=None, category=GROUNDS, curated=True)
+    assert not match(l, crit).ok

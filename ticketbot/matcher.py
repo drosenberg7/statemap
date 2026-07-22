@@ -84,6 +84,11 @@ def match(listing: Listing, criteria: Criteria) -> MatchResult:
     if listing.category not in criteria.categories:
         return MatchResult(False, f"category {listing.category} not wanted")
 
+    # Curated events were hand-picked by the user for a specific session, so we
+    # trust the date/session and only gate on price + category (done above).
+    if listing.curated:
+        return MatchResult(True, "match (curated)")
+
     # 3. Date.
     if listing.event_datetime is None:
         return MatchResult(False, "no event date")
