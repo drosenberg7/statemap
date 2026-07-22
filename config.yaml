@@ -18,7 +18,10 @@ providers:
   - seatgeek
   - ticketmaster
 
-poll_interval_seconds: 300  # 5 minutes. Don't go too low or you'll get blocked.
+poll_interval_seconds: 60   # check every minute
+poll_jitter_seconds: 0      # add up to N random extra seconds between cycles.
+                            # Raise this (e.g. 20) to look less robotic and cut
+                            # the risk of being rate-limited/blocked.
 request_timeout: 20
 state_path: state.json      # remembers what we've already alerted on
 

@@ -1,0 +1,21 @@
+# 24/7 runner. Auto-restarts on crash and on host reboot.
+#
+#   cp .env.example .env      # then fill in NTFY_TOPIC (and any API keys)
+#   docker compose up -d      # start in the background, forever
+#   docker compose logs -f    # watch it work
+#   docker compose down       # stop
+#
+services:
+  ticketbot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Persist the de-dup state across restarts so you aren't re-alerted.
+      - ./data:/app/data
+      # Edit config.yaml on the host and `docker compose restart` to apply.
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      # Keep state.json on the mounted volume.
+      - STATE_PATH=/app/data/state.json
+    command: ["python", "run.py"]

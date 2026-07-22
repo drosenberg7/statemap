@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import time
 from typing import List
 
@@ -63,6 +64,7 @@ class Monitor:
             except Exception as exc:  # noqa: BLE001 - keep the loop alive no matter what
                 log.exception("poll cycle errored: %s", exc)
             elapsed = time.time() - start
-            sleep_for = max(0, interval - elapsed)
+            jitter = random.uniform(0, max(0, self.config.poll_jitter_seconds))
+            sleep_for = max(0, interval - elapsed) + jitter
             log.info("cycle done in %.1fs; sleeping %.0fs", elapsed, sleep_for)
             time.sleep(sleep_for)

@@ -28,6 +28,7 @@ def _config(tmp_path):
         criteria=Criteria(date(2026, 8, 30), "day", [GROUNDS, ASHE], 275.0),
         providers=[],  # we inject providers manually
         poll_interval_seconds=1,
+        poll_jitter_seconds=0,
         ntfy_topic="",
         ntfy_server="https://ntfy.sh",
         notifiers=["console"],

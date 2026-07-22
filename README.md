@@ -121,22 +121,43 @@ Aug 30 sessions — this sidesteps the fragile search step entirely.
 
 ---
 
-## Running it 24/7
+## Running it 24/7 (every minute)
 
-The bot is a plain long-running process. Pick your host:
+The bot is a long-running process that loops on `poll_interval_seconds` (set to
+**60** — every minute). It needs an **always-on host**; it won't survive on your
+laptop if it sleeps. Two ready-made options:
 
-- **A always-on machine / Raspberry Pi / VPS**: run under `systemd`, `tmux`, or
+### Option A — Docker (recommended, auto-restarts)
 
-  ```bash
-  nohup python run.py >> bot.log 2>&1 &
-  ```
+```bash
+cp .env.example .env        # fill in NTFY_TOPIC (+ any API keys)
+docker compose up -d        # runs forever, restarts on crash AND host reboot
+docker compose logs -f      # watch it
+docker compose down         # stop
+```
 
-- **cron-style one-shots** (no long-lived process): schedule `python run.py --once`
-  every few minutes. State is persisted in `state.json`, so de-duping works
-  across separate invocations.
+State persists in `./data/state.json` (mounted volume), so restarts don't
+re-alert you. Edit `config.yaml` then `docker compose restart` to apply changes.
 
-Keep `poll_interval_seconds` at 5 minutes or more — hammering these sites gets
-your IP blocked fast.
+### Option B — systemd (VPS / Raspberry Pi, no Docker)
+
+```bash
+sudo cp deploy/ticketbot.service /etc/systemd/system/
+# edit User/WorkingDirectory/EnvironmentFile paths in the unit file
+sudo systemctl daemon-reload
+sudo systemctl enable --now ticketbot
+journalctl -u ticketbot -f
+```
+
+Auto-restarts on crash (`Restart=always`) and starts on boot.
+
+> **Heads-up on "every minute":** polling scrape endpoints 1,440×/day per site
+> is aggressive and will likely get your IP rate-limited or blocked. To make
+> minute-level polling actually reliable, either (a) add the free
+> **Ticketmaster / SeatGeek API keys** (their APIs tolerate frequent polling),
+> and/or (b) set `poll_jitter_seconds: 20` so requests aren't perfectly
+> periodic. If you start seeing empty results or errors in the logs, back the
+> interval off to 120–180s.
 
 ---
 
