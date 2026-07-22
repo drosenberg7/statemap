@@ -112,22 +112,41 @@ class TickPickProvider(Provider):
             try:
                 resp = self._get(_LISTINGS_URL.format(event_id=ev["id"]))
                 resp.raise_for_status()
-                listings.extend(
-                    parse_listings(resp.json(), ev["title"], ev["datetime"], ev["url"])
-                )
+                parsed = parse_listings(resp.json(), ev["title"], ev["datetime"], ev["url"])
+                for l in parsed:
+                    # A pinned event carries its venue + "trust me" flag.
+                    if ev.get("category"):
+                        l.category = ev["category"]
+                    if ev.get("curated"):
+                        l.curated = True
+                listings.extend(parsed)
             except Exception as exc:  # noqa: BLE001
                 log.warning("tickpick: listings for event %s failed: %s", ev["id"], exc)
         return listings
 
     def _discover_events(self) -> List[dict]:
+        # 1. Per-event pins from config (id + venue) — most reliable.
+        cfg_events = getattr(self.config, "tickpick_events", None) or []
+        if cfg_events:
+            return [
+                {"id": e["id"], "category": e.get("category"),
+                 "title": e.get("label", "US Open Tennis"), "datetime": None,
+                 "url": f"https://www.tickpick.com/buy-tickets/{e['id']}",
+                 "curated": True}
+                for e in cfg_events
+            ]
+        # 2. Bare ids from the environment (no venue mapping).
         pinned = os.environ.get("TICKPICK_EVENT_IDS", "").strip()
         if pinned:
             return [
-                {"id": eid.strip(), "title": "US Open Tennis", "datetime": None,
-                 "url": f"https://www.tickpick.com/e/{eid.strip()}"}
+                {"id": eid.strip(), "category": None, "title": "US Open Tennis",
+                 "datetime": None,
+                 "url": f"https://www.tickpick.com/buy-tickets/{eid.strip()}",
+                 "curated": True}
                 for eid in pinned.split(",")
                 if eid.strip()
             ]
+        # 3. Fall back to search (fragile).
         try:
             resp = self._get(_SEARCH_URL, params={"q": _QUERY})
             resp.raise_for_status()

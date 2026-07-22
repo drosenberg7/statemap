@@ -18,6 +18,21 @@ providers:
   - seatgeek
   - ticketmaster
 
+# Specific TickPick events to watch (hand-picked for the Aug 30 sessions).
+# These are "curated": the bot trusts the venue below and alerts on any listing
+# under max_price, without re-checking the date (TickPick doesn't give us a
+# reliable one from a pinned id). TickPick prices are all-in / no added fees.
+tickpick_events:
+  - id: "7396834"
+    category: ashe        # 2026 US Open - Session 1 (Arthur Ashe Stadium)
+    label: "US Open — Arthur Ashe Stadium"
+  - id: "7396894"
+    category: grounds     # 2026 US Open - Grounds Pass, Sunday Admission
+    label: "US Open — Grounds Pass (Sunday)"
+  - id: "7396807"
+    category: armstrong   # 2026 US Open - Session 1 (Louis Armstrong Stadium)
+    label: "US Open — Louis Armstrong Stadium"
+
 poll_interval_seconds: 60   # check every minute
 poll_jitter_seconds: 0      # add up to N random extra seconds between cycles.
                             # Raise this (e.g. 20) to look less robotic and cut

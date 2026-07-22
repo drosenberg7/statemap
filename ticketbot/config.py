@@ -32,6 +32,7 @@ class Config:
     ntfy_server: str
     notifiers: List[str]         # active notifier backends
     state_path: str
+    tickpick_events: List[dict] = field(default_factory=list)
     request_timeout: int = 20
     user_agent: str = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -86,6 +87,21 @@ def load_config(path: str = "config.yaml") -> Config:
     )
     notifiers = notify_raw.get("channels", ["ntfy", "console"])
 
+    # Optional per-event pins (currently TickPick). Each needs an id; category
+    # is validated against the known venues so a typo fails loudly.
+    tickpick_events = []
+    for ev in raw.get("tickpick_events", []) or []:
+        if "id" not in ev:
+            raise ValueError("each tickpick_events entry needs an 'id'")
+        cat = str(ev.get("category", "")).strip().lower() or None
+        if cat is not None and cat not in _VALID_CATEGORIES:
+            raise ValueError(f"tickpick_events id={ev['id']}: bad category {cat!r}")
+        tickpick_events.append({
+            "id": str(ev["id"]),
+            "category": cat,
+            "label": ev.get("label", "US Open Tennis"),
+        })
+
     extra = {
         "email": {
             "smtp_host": os.environ.get("SMTP_HOST", ""),
@@ -109,6 +125,7 @@ def load_config(path: str = "config.yaml") -> Config:
         ntfy_server=ntfy_server,
         notifiers=notifiers,
         state_path=os.environ.get("STATE_PATH", raw.get("state_path", "state.json")),
+        tickpick_events=tickpick_events,
         request_timeout=int(raw.get("request_timeout", 20)),
         extra=extra,
     )
