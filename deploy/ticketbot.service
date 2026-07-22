@@ -1,0 +1,29 @@
+# systemd unit for running the bot 24/7 on a Linux host (VPS, Raspberry Pi, …).
+#
+# Setup:
+#   sudo cp deploy/ticketbot.service /etc/systemd/system/
+#   # edit the paths/user below to match where you cloned the repo
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ticketbot
+#   journalctl -u ticketbot -f          # watch the logs
+#
+# It auto-restarts on crash and starts on boot.
+
+[Unit]
+Description=US Open ticket monitor bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# --- edit these three lines ---
+User=youruser
+WorkingDirectory=/home/youruser/statemap
+EnvironmentFile=/home/youruser/statemap/.env
+# ------------------------------
+ExecStart=/usr/bin/env python3 run.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
