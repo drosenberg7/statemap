@@ -151,6 +151,21 @@ journalctl -u ticketbot -f
 
 Auto-restarts on crash (`Restart=always`) and starts on boot.
 
+### Option C — GitHub Actions (no server of your own)
+
+If you don't have an always-on machine, `.github/workflows/monitor.yml` runs the
+bot on GitHub's free scheduled runners. Caveats to set expectations:
+
+- **Every 5 minutes, not every minute** — that's GitHub's minimum, and runs are
+  best-effort (delayed/skipped under load).
+- Runners use datacenter IPs that ticket sites often block, so this option is
+  **really only dependable with the API keys set** (below).
+- The schedule only starts firing once the workflow file is on your **default
+  branch (`main`)**.
+
+De-dup state is persisted between runs via the Actions cache, so you won't get
+repeat alerts.
+
 > **Heads-up on "every minute":** polling scrape endpoints 1,440×/day per site
 > is aggressive and will likely get your IP rate-limited or blocked. To make
 > minute-level polling actually reliable, either (a) add the free

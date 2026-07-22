@@ -1,0 +1,63 @@
+# Keyless-host fallback: run the bot on GitHub's free scheduled runners.
+#
+# IMPORTANT LIMITATIONS — read before relying on this:
+#  * GitHub's smallest schedule is every 5 minutes (NOT every minute), and
+#    scheduled runs are best-effort — under load GitHub delays or SKIPS them.
+#    For true every-minute polling, use the Docker/systemd host instead.
+#  * Runners use datacenter IPs that ticket sites frequently block outright.
+#    This workflow is really only dependable with the official API keys set
+#    (TICKETMASTER_API_KEY / SEATGEEK_CLIENT_ID) — scraping from here often
+#    returns nothing.
+#  * Scheduled/dispatch triggers only fire once this file is on the DEFAULT
+#    branch (main). See README "Option C" for the step-by-step.
+#
+# Secrets to add in: repo → Settings → Secrets and variables → Actions
+#   NTFY_TOPIC              (required)
+#   TICKETMASTER_API_KEY    (recommended)
+#   SEATGEEK_CLIENT_ID      (recommended)
+
+name: ticket-monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes (GitHub minimum)
+  workflow_dispatch:         # lets you run it on demand from the Actions tab
+
+# Never let two poll cycles overlap.
+concurrency:
+  group: ticket-monitor
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # Restore the de-dup state from the most recent run so we don't
+      # re-alert on listings we already sent. A fresh run_id key means we
+      # always save an updated cache; restore-keys pulls the latest prior one.
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: ticketbot-state-${{ github.run_id }}
+          restore-keys: |
+            ticketbot-state-
+
+      - name: Poll once
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_SERVER: https://ntfy.sh
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          SEATGEEK_CLIENT_ID: ${{ secrets.SEATGEEK_CLIENT_ID }}
+          STATE_PATH: state.json
+        run: python run.py --once
