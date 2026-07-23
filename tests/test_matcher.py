@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from ticketbot.config import Criteria
 from ticketbot.matcher import classify_category, infer_session, match
-from ticketbot.models import ARMSTRONG, ASHE, GROUNDS, OTHER, Listing
+from ticketbot.models import ARMSTRONG, ASHE, GRANDSTAND, GROUNDS, OTHER, Listing
 
 
 CRIT = Criteria(
@@ -36,12 +36,18 @@ def test_classify_armstrong():
 def test_classify_grounds():
     assert classify_category("US Open Grounds Pass") == GROUNDS
 
-def test_classify_grandstand_is_grounds():
-    # SeatGeek labels the grounds tier "Grandstand" at the Billie Jean King center.
+def test_grandstand_is_its_own_category_not_grounds():
+    # Grandstand is a distinct tier from a general Grounds Pass.
     assert classify_category(
         "US Open Tennis - Day Session 1 (Grandstand Only)",
         "Grandstand at the Billie Jean King Tennis Center",
-    ) == GROUNDS
+    ) == GRANDSTAND
+
+def test_grandstand_not_tracked_by_default():
+    # Default criteria wants grounds/ashe/armstrong — a grandstand listing is skipped.
+    l = _listing(price=100, event_title="US Open Tennis (Grandstand Only)",
+                 section="Grandstand at the Billie Jean King Tennis Center")
+    assert not match(l, CRIT).ok
 
 def test_specific_venue_beats_grounds():
     # A stadium page that also mentions "grounds" should classify as the stadium.

@@ -9,7 +9,7 @@ from typing import List
 
 import yaml
 
-from .models import ARMSTRONG, ASHE, GROUNDS
+from .models import ARMSTRONG, ASHE, GRANDSTAND, GROUNDS
 
 
 @dataclass
@@ -42,7 +42,7 @@ class Config:
     extra: dict = field(default_factory=dict)
 
 
-_VALID_CATEGORIES = {GROUNDS, ASHE, ARMSTRONG}
+_VALID_CATEGORIES = {GROUNDS, ASHE, ARMSTRONG, GRANDSTAND}
 
 
 def load_config(path: str = "config.yaml") -> Config:

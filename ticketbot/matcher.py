@@ -12,15 +12,16 @@ from datetime import datetime
 from typing import Optional
 
 from .config import Criteria
-from .models import ARMSTRONG, ASHE, GROUNDS, OTHER, Listing
+from .models import ARMSTRONG, ASHE, GRANDSTAND, GROUNDS, OTHER, Listing
 
 # Text patterns used to classify a raw title/section into a canonical category.
+# Order matters: more specific venues win. Grandstand is its own tier and is
+# deliberately NOT the same as a general Grounds Pass.
 _CATEGORY_PATTERNS = [
     (ASHE, re.compile(r"\barthur\s+ashe\b|\bashe\b", re.I)),
     (ARMSTRONG, re.compile(r"\blouis\s+armstrong\b|\barmstrong\b", re.I)),
-    # "Grounds Pass" (TickPick) and the standalone "Grandstand" / Billie Jean
-    # King center listings (SeatGeek) are the same grounds-access tier.
-    (GROUNDS, re.compile(r"\bgrounds?\b|\bgrandstand\b|billie\s+jean\s+king", re.I)),
+    (GRANDSTAND, re.compile(r"\bgrandstand\b", re.I)),
+    (GROUNDS, re.compile(r"\bgrounds?\b(\s+(pass|admission))?", re.I)),
 ]
 
 # Night sessions at the US Open start in the evening; day sessions at 11am-ish.
