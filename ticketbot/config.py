@@ -28,6 +28,7 @@ class Config:
     providers: List[str]         # which providers to poll
     poll_interval_seconds: int
     poll_jitter_seconds: int
+    heartbeat_hours: float
     ntfy_topic: str
     ntfy_server: str
     notifiers: List[str]         # active notifier backends
@@ -121,6 +122,7 @@ def load_config(path: str = "config.yaml") -> Config:
         providers=raw.get("providers", ["tickpick", "seatgeek", "ticketmaster"]),
         poll_interval_seconds=int(raw.get("poll_interval_seconds", 300)),
         poll_jitter_seconds=int(raw.get("poll_jitter_seconds", 0)),
+        heartbeat_hours=float(raw.get("heartbeat_hours", 24)),
         ntfy_topic=ntfy_topic,
         ntfy_server=ntfy_server,
         notifiers=notifiers,

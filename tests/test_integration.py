@@ -29,6 +29,7 @@ def _config(tmp_path):
         providers=[],  # we inject providers manually
         poll_interval_seconds=1,
         poll_jitter_seconds=0,
+        heartbeat_hours=0,  # disabled by default in tests
         ntfy_topic="",
         ntfy_server="https://ntfy.sh",
         notifiers=["console"],

@@ -80,6 +80,26 @@ def enrich(listing: Listing) -> Listing:
     return listing
 
 
+def matches_ignoring_price(listing: Listing, criteria: Criteria) -> bool:
+    """Same as `match` but without the price gate.
+
+    Used by the heartbeat to report the cheapest ticket currently available for
+    the wanted sessions, even when it's still above the threshold.
+    """
+    enrich(listing)
+    if listing.category not in criteria.categories:
+        return False
+    if listing.curated:
+        return True
+    if listing.event_datetime is None:
+        return False
+    if listing.event_datetime.date() != criteria.target_date:
+        return False
+    if criteria.session != "any" and listing.session and listing.session != criteria.session:
+        return False
+    return True
+
+
 def match(listing: Listing, criteria: Criteria) -> MatchResult:
     """Return whether a listing satisfies every criterion, with a reason."""
     enrich(listing)

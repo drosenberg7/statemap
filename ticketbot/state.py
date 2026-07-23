@@ -63,5 +63,17 @@ class SeenState:
         self._map[listing_id] = {"price": price, "ts": time.time()}
         self._save()
 
+    # Heartbeat bookkeeping. Stored under a reserved key so it never collides
+    # with a listing id (which are 16-hex).
+    _HEARTBEAT_KEY = "__heartbeat__"
+
+    def seconds_since_heartbeat(self) -> float:
+        ts = self._map.get(self._HEARTBEAT_KEY, {}).get("ts")
+        return float("inf") if ts is None else time.time() - ts
+
+    def mark_heartbeat(self) -> None:
+        self._map[self._HEARTBEAT_KEY] = {"ts": time.time()}
+        self._save()
+
     def __len__(self) -> int:
         return len(self._map)
