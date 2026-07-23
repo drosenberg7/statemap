@@ -97,7 +97,7 @@ class TicketmasterProvider(Provider):
             start = (ev.get("dates") or {}).get("start") or {}
             prices = ev.get("priceRanges") or []
             pr = f"{prices[0].get('min')}-{prices[0].get('max')}" if prices else "none"
-            log.info(
+            log.debug(
                 "ticketmaster: - %s | %s | %s %s | price=%s",
                 ev.get("name"),
                 venues[0].get("name") if venues else "?",
