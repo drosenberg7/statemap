@@ -12,12 +12,14 @@ from typing import Optional
 GROUNDS = "grounds"
 ASHE = "ashe"
 ARMSTRONG = "armstrong"
+GRANDSTAND = "grandstand"
 OTHER = "other"
 
 CATEGORY_LABELS = {
     GROUNDS: "Grounds Pass",
     ASHE: "Arthur Ashe Stadium",
     ARMSTRONG: "Louis Armstrong Stadium",
+    GRANDSTAND: "Grandstand",
     OTHER: "Other",
 }
 
