@@ -224,9 +224,9 @@ class TickPickProvider(Provider):
                     log.info("tickpick: %d row(s) from HTML embed for %s", len(rows), event_id)
                     return rows
                 log.warning(
-                    "tickpick: event %s page loaded but no listings found in embed "
-                    "(listings likely load via a separate XHR — capture it from the "
-                    "browser Network tab and update _LISTINGS_URLS)", event_id,
+                    "tickpick: event %s — no listings. The listings API 403'd above "
+                    "(TickPick blocks datacenter IPs like GitHub's). Run from a "
+                    "residential IP (Docker at home) or use the official APIs.", event_id,
                 )
             else:
                 log.warning("tickpick: event page %s -> HTTP %s", event_id, resp.status_code)
