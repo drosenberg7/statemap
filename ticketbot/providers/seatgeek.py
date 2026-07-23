@@ -92,7 +92,7 @@ class SeatGeekProvider(Provider):
         log.info("seatgeek: meta.total=%s, events_in_page=%d", total, len(events))
         for ev in events[:8]:
             stats = ev.get("stats") or {}
-            log.info(
+            log.debug(
                 "seatgeek: - %s | %s | %s | low=$%s",
                 ev.get("title"),
                 (ev.get("venue") or {}).get("name"),

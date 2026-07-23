@@ -18,7 +18,9 @@ from .models import ARMSTRONG, ASHE, GROUNDS, OTHER, Listing
 _CATEGORY_PATTERNS = [
     (ASHE, re.compile(r"\barthur\s+ashe\b|\bashe\b", re.I)),
     (ARMSTRONG, re.compile(r"\blouis\s+armstrong\b|\barmstrong\b", re.I)),
-    (GROUNDS, re.compile(r"\bgrounds?\b(\s+(pass|admission))?", re.I)),
+    # "Grounds Pass" (TickPick) and the standalone "Grandstand" / Billie Jean
+    # King center listings (SeatGeek) are the same grounds-access tier.
+    (GROUNDS, re.compile(r"\bgrounds?\b|\bgrandstand\b|billie\s+jean\s+king", re.I)),
 ]
 
 # Night sessions at the US Open start in the evening; day sessions at 11am-ish.
