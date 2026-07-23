@@ -20,8 +20,15 @@ from .models import ARMSTRONG, ASHE, GRANDSTAND, GROUNDS, OTHER, Listing
 _CATEGORY_PATTERNS = [
     (ASHE, re.compile(r"\barthur\s+ashe\b|\bashe\b", re.I)),
     (ARMSTRONG, re.compile(r"\blouis\s+armstrong\b|\barmstrong\b", re.I)),
+    # Grandstand is checked before grounds so "Grandstand at the Billie Jean
+    # King Center" (SeatGeek) resolves to grandstand, while the bare
+    # "Billie Jean King National Tennis Center" (Ticketmaster) is the grounds
+    # admission to the whole complex.
     (GRANDSTAND, re.compile(r"\bgrandstand\b", re.I)),
-    (GROUNDS, re.compile(r"\bgrounds?\b(\s+(pass|admission))?", re.I)),
+    (GROUNDS, re.compile(
+        r"\bgrounds?\b(\s+(pass|admission))?|billie\s+jean\s+king|national\s+tennis\s+cent(er|re)",
+        re.I,
+    )),
 ]
 
 # Night sessions at the US Open start in the evening; day sessions at 11am-ish.

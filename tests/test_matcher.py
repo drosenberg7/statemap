@@ -43,6 +43,12 @@ def test_grandstand_is_its_own_category_not_grounds():
         "Grandstand at the Billie Jean King Tennis Center",
     ) == GRANDSTAND
 
+def test_billie_jean_king_center_is_grounds():
+    # Ticketmaster's bare complex venue = general grounds admission.
+    assert classify_category(
+        "Men's/Women's First Round", "Billie Jean King National Tennis Center"
+    ) == GROUNDS
+
 def test_grandstand_not_tracked_by_default():
     # Default criteria wants grounds/ashe/armstrong — a grandstand listing is skipped.
     l = _listing(price=100, event_title="US Open Tennis (Grandstand Only)",
