@@ -72,19 +72,34 @@ class SeatGeekProvider(Provider):
         return self._fetch_scrape()
 
     def _fetch_api(self, client_id: str) -> List[Listing]:
-        target = self.config.criteria.target_date.isoformat()
+        # Query broadly by keyword and let the matcher pin down the exact date /
+        # session / venue. API-side date filtering was too brittle (timezone +
+        # how SeatGeek dates its sessions), so we pull the US Open events and
+        # filter locally. Rich logging so the response shape is visible.
         resp = self._get(
             _PLATFORM_URL,
             params={
                 "client_id": client_id,
                 "q": _QUERY,
-                "datetime_local.gte": f"{target}T00:00:00",
-                "datetime_local.lte": f"{target}T23:59:59",
-                "per_page": 50,
+                "per_page": 100,
             },
         )
+        log.info("seatgeek: GET %s -> HTTP %s", _PLATFORM_URL, resp.status_code)
         resp.raise_for_status()
-        return parse_platform_events(resp.json())
+        payload = resp.json()
+        total = (payload.get("meta") or {}).get("total")
+        events = payload.get("events", [])
+        log.info("seatgeek: meta.total=%s, events_in_page=%d", total, len(events))
+        for ev in events[:8]:
+            stats = ev.get("stats") or {}
+            log.info(
+                "seatgeek: - %s | %s | %s | low=$%s",
+                ev.get("title"),
+                (ev.get("venue") or {}).get("name"),
+                ev.get("datetime_local"),
+                stats.get("lowest_price"),
+            )
+        return parse_platform_events(payload)
 
     def _fetch_scrape(self) -> List[Listing]:
         resp = self._get(_SEARCH_URL, params={"q": _QUERY})
