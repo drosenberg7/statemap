@@ -2,15 +2,14 @@
 
 TickPick is attractive for a price-threshold bot because its prices are
 all-in (no surprise fees at checkout), so a listing under $275 here really is
-under $275. TickPick has no official public API, but its site is backed by JSON
-endpoints we can call best-effort:
+under $275. TickPick has no official public API, but its site is backed by an
+internal JSON endpoint we can call:
 
-  * search:    https://www.tickpick.com/api/search/...        (find event ids)
-  * listings:  https://www.tickpick.com/api/listings/{id}     (offers for an event)
+  * listings:  https://api.tickpick.com/1.0/listings/internal/event-v2/{id}
 
-Because discovery-by-search is the most fragile part, you can pin the event ids
-directly via the TICKPICK_EVENT_IDS env var (comma-separated) once you know
-them, which makes this provider both reliable and cheap.
+where {id} matches the /buy-tickets/{id} slug. Pin the exact events to watch
+via config `tickpick_events` (id + venue) or the TICKPICK_EVENT_IDS env var,
+which makes this provider both reliable and cheap.
 """
 
 from __future__ import annotations
@@ -27,19 +26,26 @@ from .base import Provider
 
 log = logging.getLogger("ticketbot.providers.tickpick")
 
-# TickPick's internal listings endpoint has moved over time, so we try a few
-# known shapes before falling back to the data embedded in the event page HTML.
+# The listings JSON is served by TickPick's internal API (confirmed from the
+# site's own XHR). The event id matches the /buy-tickets/{id} slug. We keep an
+# older shape as a fallback, then the event-page HTML as a last resort.
 _LISTINGS_URLS = [
+    "https://api.tickpick.com/1.0/listings/internal/event-v2/{event_id}?trackView=true",
     "https://www.tickpick.com/api/listings/{event_id}",
-    "https://api.tickpick.com/listings/{event_id}",
-    "https://www.tickpick.com/api/listings/?eventId={event_id}",
 ]
 _EVENT_PAGE_URL = "https://www.tickpick.com/buy-tickets/{event_id}"
 _SEARCH_URL = "https://www.tickpick.com/api/search-suggestions"
 _QUERY = "US Open Tennis"
 
-# Keys that hold a per-ticket price in the various payload shapes.
-_PRICE_KEYS = ("price", "p", "totalPrice", "displayPrice")
+# api.tickpick.com expects requests to look like they come from the site.
+_API_HEADERS = {
+    "Origin": "https://www.tickpick.com",
+    "Referer": "https://www.tickpick.com/",
+    "Accept": "application/json, text/plain, */*",
+}
+
+# Keys that hold a per-ticket price across the various payload shapes.
+_PRICE_KEYS = ("price", "p", "totalPrice", "displayPrice", "faceValue", "currentPrice")
 
 
 def find_listings_array(obj) -> list:
@@ -189,16 +195,26 @@ class TickPickProvider(Provider):
         for tmpl in _LISTINGS_URLS:
             url = tmpl.format(event_id=event_id)
             try:
-                resp = self._get(url)
+                resp = self._get(url, headers=_API_HEADERS)
+                log.info("tickpick: GET %s -> HTTP %s", url, resp.status_code)
                 if resp.status_code != 200:
-                    log.debug("tickpick: %s -> HTTP %s", url, resp.status_code)
                     continue
-                rows = find_listings_array(resp.json())
+                try:
+                    data = resp.json()
+                except ValueError:
+                    log.info("tickpick: %s returned non-JSON body", url)
+                    continue
+                rows = find_listings_array(data)
                 if rows:
-                    log.info("tickpick: %d row(s) from API %s", len(rows), url)
+                    log.info(
+                        "tickpick: %d row(s) from %s; sample keys=%s",
+                        len(rows), url, list(rows[0].keys())[:25],
+                    )
                     return rows
+                shape = list(data.keys()) if isinstance(data, dict) else f"list[{len(data)}]"
+                log.info("tickpick: %s 200 but no listings array; top-level=%s", url, shape)
             except Exception as exc:  # noqa: BLE001
-                log.debug("tickpick: api %s failed: %s", url, exc)
+                log.info("tickpick: api %s failed: %s", url, exc)
         # 2. Fall back to the data embedded in the event page HTML.
         try:
             resp = self._get(_EVENT_PAGE_URL.format(event_id=event_id))
