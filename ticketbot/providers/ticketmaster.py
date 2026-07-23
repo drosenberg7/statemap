@@ -74,16 +74,34 @@ class TicketmasterProvider(Provider):
         if not api_key:
             log.info("ticketmaster: no API key set; skipping (Discovery API requires one)")
             return []
-        target = self.config.criteria.target_date.isoformat()
+        # Query broadly by keyword; let the matcher pin date/session/venue.
+        # (API-side date filtering in UTC was dropping ET sessions.) Rich logging
+        # so the Discovery response shape is visible in the run.
         resp = self._get(
             _DISCOVERY_URL,
             params={
                 "apikey": api_key,
                 "keyword": _KEYWORD,
-                "startDateTime": f"{target}T00:00:00Z",
-                "endDateTime": f"{target}T23:59:59Z",
-                "size": 50,
+                "size": 100,
+                "sort": "date,asc",
             },
         )
+        log.info("ticketmaster: GET discovery -> HTTP %s", resp.status_code)
         resp.raise_for_status()
-        return parse_discovery(resp.json())
+        payload = resp.json()
+        total = (payload.get("page") or {}).get("totalElements")
+        events = ((payload.get("_embedded") or {}).get("events")) or []
+        log.info("ticketmaster: totalElements=%s, events_in_page=%d", total, len(events))
+        for ev in events[:12]:
+            venues = ((ev.get("_embedded") or {}).get("venues")) or []
+            start = (ev.get("dates") or {}).get("start") or {}
+            prices = ev.get("priceRanges") or []
+            pr = f"{prices[0].get('min')}-{prices[0].get('max')}" if prices else "none"
+            log.info(
+                "ticketmaster: - %s | %s | %s %s | price=%s",
+                ev.get("name"),
+                venues[0].get("name") if venues else "?",
+                start.get("localDate"), start.get("localTime", ""),
+                pr,
+            )
+        return parse_discovery(payload)
