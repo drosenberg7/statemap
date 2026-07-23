@@ -26,18 +26,26 @@ class Notifier:
     def notify(self, listing: Listing) -> None:
         # Keep the title plain ASCII: HTTP headers (used by ntfy) are latin-1,
         # so an emoji here throws. ntfy renders the 🎾 from the "tennis" tag.
-        title = "US Open ticket found"
-        body = listing.summary()
+        self._emit(
+            "US Open ticket found", listing.summary(), url=listing.url,
+            tags="tennis,tickets", priority="high",
+        )
+
+    def send_text(self, title: str, body: str) -> None:
+        """Send a plain informational message (e.g. the alive heartbeat)."""
+        self._emit(title, body, url="", tags="tennis,green_circle", priority="low")
+
+    def _emit(self, title: str, body: str, url: str, tags: str, priority: str) -> None:
         for channel in self.channels:
             try:
                 if channel == "ntfy":
-                    self._ntfy(title, body, listing.url)
+                    self._ntfy(title, body, url, tags, priority)
                 elif channel == "console":
-                    self._console(title, body, listing.url)
+                    self._console(title, body, url)
                 elif channel == "email":
-                    self._email(title, body, listing.url)
+                    self._email(title, body, url)
                 elif channel == "webhook":
-                    self._webhook(title, body, listing)
+                    self._webhook(title, body, url)
                 else:
                     log.warning("unknown notify channel: %s", channel)
             except Exception as exc:  # noqa: BLE001 - alerts must never crash the loop
@@ -61,24 +69,28 @@ class Notifier:
             return "=?UTF-8?B?" + base64.b64encode(value.encode("utf-8")).decode("ascii") + "?="
 
     def _console(self, title: str, body: str, url: str) -> None:
-        print(f"\n*** 🎾 {title} ***\n{body}\n{url}\n", flush=True)
+        tail = f"\n{url}" if url else ""
+        print(f"\n*** 🎾 {title} ***\n{body}{tail}\n", flush=True)
 
-    def _ntfy(self, title: str, body: str, url: str) -> None:
+    def _ntfy(self, title: str, body: str, url: str, tags: str, priority: str) -> None:
         topic = self.config.ntfy_topic
         if not topic:
             log.warning("ntfy channel active but NTFY_TOPIC is empty; skipping")
             return
         server = self.config.ntfy_server.rstrip("/")
+        headers = {
+            "Title": self._encode_header(title),
+            "Priority": priority,
+            "Tags": tags,
+        }
+        # Only attach a click target / buy button when there's a real listing.
+        if url:
+            headers["Click"] = url
+            headers["Actions"] = f"view, Buy now, {url}"
         requests.post(
             f"{server}/{topic}",
             data=body.encode("utf-8"),
-            headers={
-                "Title": self._encode_header(title),
-                "Priority": "high",
-                "Tags": "tennis,tickets",
-                "Click": url,
-                "Actions": f"view, Buy now, {url}",
-            },
+            headers=headers,
             timeout=self.config.request_timeout,
         ).raise_for_status()
 
@@ -97,16 +109,14 @@ class Notifier:
                 srv.login(cfg["smtp_user"], cfg["smtp_password"])
             srv.send_message(msg)
 
-    def _webhook(self, title: str, body: str, listing: Listing) -> None:
+    def _webhook(self, title: str, body: str, url: str) -> None:
         cfg = self.config.extra["webhook"]
         if not cfg["url"]:
             log.warning("webhook channel active but WEBHOOK_URL is empty; skipping")
             return
+        text = f"{title}\n{body}" + (f"\n{url}" if url else "")
         # A shape that works for both Slack ("text") and Discord ("content").
-        payload = {
-            "text": f"{title}\n{body}\n{listing.url}",
-            "content": f"{title}\n{body}\n{listing.url}",
-        }
+        payload = {"text": text, "content": text}
         requests.post(
             cfg["url"],
             data=json.dumps(payload),

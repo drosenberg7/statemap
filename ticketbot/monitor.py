@@ -8,7 +8,7 @@ import time
 from typing import List
 
 from .config import Config
-from .matcher import match
+from .matcher import match, matches_ignoring_price
 from .models import Listing
 from .notifier import Notifier
 from .providers import build_providers
@@ -48,7 +48,31 @@ class Monitor:
             self.state.record(listing.id, listing.price)
             matched.append(listing)
 
+        self._maybe_heartbeat(all_listings)
         return matched
+
+    def _maybe_heartbeat(self, all_listings: List[Listing]) -> None:
+        """Periodically confirm the bot is alive, even when nothing matches."""
+        hours = self.config.heartbeat_hours
+        if hours <= 0:
+            return
+        if self.state.seconds_since_heartbeat() < hours * 3600:
+            return
+
+        crit = self.config.criteria
+        candidates = [l for l in all_listings if matches_ignoring_price(l, crit)]
+        priced = [l.price for l in candidates if l.price is not None]
+        cheapest = f"${min(priced):.0f}" if priced else "no priced listings yet"
+        cats = "/".join(crit.categories)
+        body = (
+            f"Still watching {crit.target_date} {crit.session} session "
+            f"({cats}) under ${crit.max_price:.0f}.\n"
+            f"Cheapest for your sessions right now: {cheapest}.\n"
+            f"Scanned {len(all_listings)} listing(s) this cycle. No match yet."
+        )
+        log.info("heartbeat: %s", cheapest)
+        self.notifier.send_text("US Open watch: alive", body)
+        self.state.mark_heartbeat()
 
     def run_forever(self) -> None:
         interval = self.config.poll_interval_seconds
