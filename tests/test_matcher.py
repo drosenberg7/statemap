@@ -36,6 +36,13 @@ def test_classify_armstrong():
 def test_classify_grounds():
     assert classify_category("US Open Grounds Pass") == GROUNDS
 
+def test_classify_grandstand_is_grounds():
+    # SeatGeek labels the grounds tier "Grandstand" at the Billie Jean King center.
+    assert classify_category(
+        "US Open Tennis - Day Session 1 (Grandstand Only)",
+        "Grandstand at the Billie Jean King Tennis Center",
+    ) == GROUNDS
+
 def test_specific_venue_beats_grounds():
     # A stadium page that also mentions "grounds" should classify as the stadium.
     assert classify_category("Arthur Ashe Stadium (includes grounds access)") == ASHE
@@ -78,7 +85,7 @@ def test_wrong_session_rejected():
     assert not r.ok and "session" in r.reason
 
 def test_wrong_category_rejected():
-    r = match(_listing(section="Grandstand Suite", event_title="US Open Luxury Suite"), CRIT)
+    r = match(_listing(section="VIP Suite", event_title="US Open Luxury Suite Experience"), CRIT)
     assert not r.ok and "category" in r.reason
 
 def test_grounds_match():
