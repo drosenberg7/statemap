@@ -19,9 +19,11 @@
 name: ticket-monitor
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes (GitHub minimum)
-  workflow_dispatch:         # lets you run it on demand from the Actions tab
+  # Automatic schedule is OFF (the Aug 30 2026 session has passed). To resume,
+  # uncomment the two lines below and adjust criteria.target_date in config.yaml.
+  # schedule:
+  #   - cron: "*/5 * * * *"   # every 5 minutes (GitHub minimum)
+  workflow_dispatch:         # still runnable on demand from the Actions tab
     inputs:
       mode:
         description: "once = normal poll · test = send a test push to your phone"
